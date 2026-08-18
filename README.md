@@ -1,4 +1,4 @@
-# dsh-client-auto-retry
+# @frog755/dsh-client-auto-retry
 
 > DSH 客户端插件：检测到回合被中断 / 出错 / 超长（max-tokens）时，自动发送「继续」重试。
 > 只做自动重试，**不做**模型 / provider 切换。自带设置卡片。
@@ -28,16 +28,16 @@ DeepSeek Harness（DSH）的回合（turn）偶尔会因为网络抖动、provid
 在 DSH 的 profile 目录（例如 `~/.dsh/profiles/web`）里执行：
 
 ```powershell
-pnpm add dsh-client-auto-retry
+pnpm add @frog755/dsh-client-auto-retry
 ```
 
-然后编辑该目录下的 `package.json`，把 `dsh-client-auto-retry` 加入 `dsh.profile.bundles`
+然后编辑该目录下的 `package.json`，把 `@frog755/dsh-client-auto-retry` 加入 `dsh.profile.bundles`
 （插件自带的 `cordis.patch.yml` 会以 bundle 层的形式把 `auto-retry` 行插入插件清单）：
 
 ```jsonc
 {
   "dependencies": {
-    "dsh-client-auto-retry": "^0.3.0"
+    "@frog755/dsh-client-auto-retry": "^0.3.0"
   },
   "dsh": {
     "profile": {
@@ -45,7 +45,7 @@ pnpm add dsh-client-auto-retry
         "@deepseek-ai/dsh-base",
         "@deepseek-ai/dsh-web-app",
         // ... 其他 bundle ...
-        "dsh-client-auto-retry"
+        "@frog755/dsh-client-auto-retry"
       ]
     }
   }
@@ -65,7 +65,7 @@ pnpm install
 ```jsonc
 {
   "dependencies": {
-    "dsh-client-auto-retry": "link:C:/Users/frog/.dsh/projects/dsh-client-auto-retry"
+    "@frog755/dsh-client-auto-retry": "link:C:/Users/frog/.dsh/projects/dsh-client-auto-retry"
   }
 }
 ```

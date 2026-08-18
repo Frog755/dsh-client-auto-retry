@@ -1,4 +1,4 @@
-# dsh-client-auto-retry
+# @frog755/dsh-client-auto-retry
 
 > A DeepSeek Harness (DSH) **client plugin** that detects interrupted / errored /
 > overlong (`max-tokens`) turns and automatically sends a "继续 / continue" prompt
@@ -32,17 +32,17 @@ This plugin:
 Inside your DSH profile directory (e.g. `~/.dsh/profiles/web`):
 
 ```powershell
-pnpm add dsh-client-auto-retry
+pnpm add @frog755/dsh-client-auto-retry
 ```
 
-Then add `dsh-client-auto-retry` to `dsh.profile.bundles` in the profile's
+Then add `@frog755/dsh-client-auto-retry` to `dsh.profile.bundles` in the profile's
 `package.json` (the package ships a `cordis.patch.yml` that inserts the
 `auto-retry` row into the plugin roster as a bundle layer):
 
 ```jsonc
 {
   "dependencies": {
-    "dsh-client-auto-retry": "^0.3.0"
+    "@frog755/dsh-client-auto-retry": "^0.3.0"
   },
   "dsh": {
     "profile": {
@@ -50,7 +50,7 @@ Then add `dsh-client-auto-retry` to `dsh.profile.bundles` in the profile's
         "@deepseek-ai/dsh-base",
         "@deepseek-ai/dsh-web-app",
         // ... other bundles ...
-        "dsh-client-auto-retry"
+        "@frog755/dsh-client-auto-retry"
       ]
     }
   }
@@ -71,7 +71,7 @@ refresh the browser page.
 ```jsonc
 {
   "dependencies": {
-    "dsh-client-auto-retry": "link:C:/Users/frog/.dsh/projects/dsh-client-auto-retry"
+    "@frog755/dsh-client-auto-retry": "link:C:/Users/frog/.dsh/projects/dsh-client-auto-retry"
   }
 }
 ```
