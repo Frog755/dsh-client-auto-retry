@@ -111,6 +111,8 @@ flowchart LR
 
 ## 兼容性说明（重点）
 
+> 📖 详细版见 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)（含排查步骤与修改点索引）。
+
 ### 已适配版本
 
 本插件是针对 **DSH `0.1.0-rc.7`**（web 端 profile；desktop runtime 同版本）编写并验证的。

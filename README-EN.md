@@ -118,6 +118,8 @@ host half) only registers the settings schema.
 
 ## Compatibility notes (important)
 
+> 📖 Full version: [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) (with a debugging checklist and an index of modification points).
+
 ### Tested version
 
 This plugin was written and verified against **DSH `0.1.0-rc.7`** (web profile;
