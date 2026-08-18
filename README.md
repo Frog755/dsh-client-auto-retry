@@ -5,6 +5,10 @@
 
 English version: [README-EN.md](./README-EN.md)
 
+<p align="center">
+  <img src="assets/demo.svg" alt="dsh-client-auto-retry 工作流程" width="720">
+</p>
+
 ---
 
 ## 它能做什么

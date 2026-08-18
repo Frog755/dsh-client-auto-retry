@@ -7,6 +7,10 @@
 
 中文版: [README.md](./README.md)
 
+<p align="center">
+  <img src="assets/demo.svg" alt="dsh-client-auto-retry workflow" width="720">
+</p>
+
 ---
 
 ## What it does
