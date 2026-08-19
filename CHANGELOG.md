@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   auto-reconnect with backoff.
 - Bilingual README (中文 + English) with a version-compatibility matrix for other DSH builds.
 
+## [0.3.1] - 2026-08-19
+
+### Fixed
+
+- **设置卡片不显示最新值**：`scope.subscribe` 回调原先每次用 `store.create()` 新建一个无人渲染的 store 实例，
+  导致保存后卡片仍显示旧值。现改为捕获渲染中实例的 actions（`liveActions`）并直接更新它，保存后立即显示新值
+  （与 dsh-wallpaper 的 `actions.sync` 模式一致）。
+- **设置卡片硬编码黑底**：输入框/复选框/保存按钮原来写死 `#1e1e1e` / `#444` / `#2563eb` 等颜色，
+  不跟随主题。现全部改用 DSH 主题 token（`--dsw-alias-*`），自动适配明/暗主题，输入框获得
+  圆角、hover/focus 高亮等更自然的观感。
+
 ## [Unreleased]
 
 ### Planned

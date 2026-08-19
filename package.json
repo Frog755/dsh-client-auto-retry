@@ -1,6 +1,6 @@
 {
   "name": "@frog755/dsh-client-auto-retry",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DSH client plugin: 检测回合被中断/出错/超长时, 自动发送「继续」重试, 不做模型/provider 切换。带设置卡片。",
   "license": "MIT",
   "author": "Frog755",
