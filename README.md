@@ -164,6 +164,12 @@ flowchart LR
 
 日志前缀：`[auto-retry]`。`verbose: false` 可关闭非关键日志（连接日志仍会输出）。
 
+## 致谢
+
+本插件的开发与日常调试使用了阿里云百炼的免费模型额度（学生认证赠送 300 元，国内主流模型基本都能用）：
+
+<https://university.aliyun.com/course/promotion27-activity?clubTaskBiz=subTask..12810055..10280..&userCode=hbs5sljx>
+
 ## License
 
 MIT

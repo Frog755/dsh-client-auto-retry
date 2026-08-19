@@ -175,6 +175,14 @@ table below item by item.**
 Log prefix: `[auto-retry]`. Set `verbose: false` to silence non-critical logs
 (connection logs still print).
 
+## Acknowledgements
+
+Development and daily testing of this plugin used free model credits from
+Alibaba Cloud Bailian (student-verified accounts receive ¥300 credit, covering
+most mainstream domestic models):
+
+<https://university.aliyun.com/course/promotion27-activity?clubTaskBiz=subTask..12810055..10280..&userCode=hbs5sljx>
+
 ## License
 
 MIT
