@@ -1,5 +1,8 @@
 # @frog755/dsh-client-auto-retry
 
+[![awesome · DSH plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
+[![npm version](https://img.shields.io/npm/v/@frog755/dsh-client-auto-retry?logo=npm&label=npm)](https://www.npmjs.com/package/@frog755/dsh-client-auto-retry)
+
 > DSH 客户端插件：检测到回合被中断 / 出错 / 超长（max-tokens）时，自动发送「继续」重试。
 > 只做自动重试，**不做**模型 / provider 切换。自带设置卡片。
 

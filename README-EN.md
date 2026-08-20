@@ -1,5 +1,8 @@
 # @frog755/dsh-client-auto-retry
 
+[![awesome · DSH plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
+[![npm version](https://img.shields.io/npm/v/@frog755/dsh-client-auto-retry?logo=npm&label=npm)](https://www.npmjs.com/package/@frog755/dsh-client-auto-retry)
+
 > A DeepSeek Harness (DSH) **client plugin** that detects interrupted / errored /
 > overlong (`max-tokens`) turns and automatically sends a "继续 / continue" prompt
 > to resume them. It only retries — it does **not** switch models or providers.
