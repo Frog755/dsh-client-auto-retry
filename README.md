@@ -157,6 +157,68 @@ flowchart LR
 - **不要把插件当错误兜底**：它只发「继续」，不做模型/provider 切换；如果需要故障转移，
   请在 DSH 的模型路由配置里做。
 
+## 跨 Agent 适用性与可推广方向
+
+> 本项目当前已针对 **DeepSeek Harness（DSH）** 完成适配和验证；下面的其他 Agent
+> 是基于其公开插件 / SDK / Hook / Session API 做出的适配性评估，**不代表本包已经
+> 直接支持这些平台**。不同 Agent 需要各自的薄适配层，核心的自动恢复策略可以复用。
+
+这个插件的核心能力并不局限于 DSH：它本质上是一个带安全阈值的 **Agent 回合自动恢复器**。
+只要目标 Agent 提供“监听回合状态、识别会话、发送后续消息或恢复会话”这组能力，就可以接入：
+
+```text
+监听回合 / 运行事件
+    ↓
+判断失败是否可恢复
+    ↓
+宽限期 + 冷却期 + 连续次数上限
+    ↓
+向原会话发送继续指令，或恢复同一会话
+```
+
+### 优先适配目标
+
+| Agent | 推荐适配形态 | 公开入口 | 适配性 | 备注 |
+| --- | --- | --- | --- | --- |
+| **Codex CLI / app-server** | Plugin Hook 或 app-server Adapter | `turn/completed`、`thread/resume`、`turn/start`、`turn/steer` | **很高** | 有稳定 thread/turn ID 和结构化失败状态，最接近 DSH 的事件 + 恢复模型 |
+| **Claude Code** | Agent SDK Adapter 或 Plugin Hook | `StopFailure`、`resume`、`continue_conversation` | **很高** | 官方 SDK 支持持续会话、指定 session 恢复和中断控制 |
+| **Pi coding agent** | TypeScript Extension | `agent_end`、`session_start`、`sendUserMessage()` | **很高** | 原生扩展和 session runtime 清晰，适合做本地插件 |
+| **OpenCode** | JS/TS Plugin 或 Server SDK Adapter | `session.error`、`session.idle`、`session.prompt_async` | **很高** | 插件、SSE 事件流、Session API 和异步 Prompt 均已公开 |
+| **Cline** | AgentPlugin / Runtime Hook | `afterRun`、`onEvent`、`continue()` | **很高** | 有类型化生命周期 Hook，适合封装成正式插件 |
+| **OpenClaw** | Gateway Plugin | `agent_end`、`session_*`、下一轮注入、Session API | **高** | 适合进一步扩展到卡死、超时、子 Agent 和后台任务恢复 |
+| **OpenHands** | Python SDK / Agent Server Adapter | Conversation pause/resume、`send_message()`、`run()` | **中高** | 更适合 SDK 或服务端中间件，而不是前端小插件 |
+| **Hermes Agent** | Python Plugin / Gateway Hook | `agent:end`、`post_llm_call`、Session Hook | **中** | 有丰富 Hook，但自动恢复动作需要结合其 Gateway / Session 路由实现 |
+| **Goose** | Hook / HTTP Session Adapter | Session Hook、`resume`、`steer` | **中** | 可接入，但需要仔细区分工具失败和整轮 Agent 失败 |
+
+### 适配边界
+
+- **当前已验证**：DSH Web profile（`0.1.0-rc.7`）。
+- **具备较好推广条件**：Codex、Claude Code、Pi、OpenCode、Cline、OpenClaw。
+- **适合做 SDK / Middleware，而非直接安装本插件**：OpenHands、Hermes、Goose、Aider、mini-SWE-agent。
+- **尚未宣称直接兼容**：除 DSH 外，其他平台需要单独的 Adapter、安装包和版本验证。
+
+因此，本项目可以作为一个跨 Agent 方向的基础实现：
+
+```text
+Auto-Retry Core
+├── DSH Adapter（当前实现）
+├── Codex Adapter（规划）
+├── Claude Code Adapter（规划）
+├── Pi / OpenCode / Cline Adapter（规划）
+└── OpenClaw / OpenHands 等高级 Adapter（规划）
+```
+
+公开参考：
+
+- [Codex Hooks](https://developers.openai.com/codex/hooks) · [Codex app-server](https://developers.openai.com/codex/app-server)
+- [Claude Code Hooks](https://code.claude.com/docs/en/hooks) · [Claude Agent SDK Sessions](https://code.claude.com/docs/en/agent-sdk/sessions)
+- [Pi Extensions](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md)
+- [OpenCode Plugins](https://opencode.ai/docs/plugins/) · [OpenCode SDK](https://opencode.ai/docs/sdk/)
+- [Cline Plugins](https://docs.cline.bot/sdk/plugins)
+- [OpenClaw Plugin Hooks](https://docs.openclaw.ai/plugins/hooks)
+- [OpenHands SDK](https://docs.openhands.dev/sdk)
+- [Hermes Hooks](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/hooks.md)
+
 ## 开发与调试
 
 ```powershell
