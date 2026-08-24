@@ -14,6 +14,14 @@ English version: [README-EN.md](./README-EN.md)
 
 ---
 
+## 📺 视频演示
+
+抖音讲解视频（含 429 报错自动续跑的真实演示 + 一分钟原理讲解）：
+
+<https://v.douyin.com/FAT_Vlsd_AU/>
+
+---
+
 ## 它能做什么
 
 DeepSeek Harness（DSH）的回合（turn）偶尔会因为网络抖动、provider 报错、超时、

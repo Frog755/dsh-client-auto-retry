@@ -16,6 +16,14 @@
 
 ---
 
+## 📺 Video Demo
+
+Douyin explainer video (real 429 auto-resume demo + 1-minute walkthrough):
+
+<https://v.douyin.com/FAT_Vlsd_AU/>
+
+---
+
 ## What it does
 
 DSH turns occasionally get interrupted by network flakiness, provider errors,
