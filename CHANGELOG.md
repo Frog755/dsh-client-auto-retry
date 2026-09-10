@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-10
+
+### Fixed
+
+- **「最多连续次数」上限失效（一直发「继续」）**：`sessions.prompt` 自动发送的「继续」其
+  `source.kind` 也是 `'user'`，会被插件的 `user/message` 分支当作「人工输入」把 `consecutive`
+  清零——计数器永远在 0↔1 振荡，`maxConsecutive` 闸门永不触发。现按「文本相同 + 发送后
+  `echoWindowMs` 窗口内」识别自身回显并忽略，计数器能正常累计到上限。
+- **发送失败也计入连续次数**：原先只有 `ok:true` 才 `consecutive += 1`，发送失败/异常时
+  计数器不涨，失败路径会无限重试。现无论成败都计数，`maxConsecutive` 在失败路径同样生效。
+
+### Added
+
+- **手动退出机制**：
+  - 输入框工具行左侧新增「⏹ 停止重试 / ▶ 恢复自动重试」小按钮（会话级，`conversation.input.left`），
+    点击停止后取消待发计时器、该会话不再自动发送「继续」；若上一轮以中断结尾，恢复会立即重新排期。
+  - 自动重试循环中收到人工输入（`consecutive > 0` 或有待发计时器时）立即整条退出，等待人工接管。
+  - 一轮正常完成（`turn/end` kind=completed）自动重新武装，恢复自动重试。
+- 新增设置项 `echoWindowMs`（默认 `30000`，自身回显识别窗口）。
+- `maxConsecutive` 默认值由 `5` 调整为 `4`。
+
 ## [0.3.0] - 2026-08-18
 
 ### Added

@@ -52,7 +52,7 @@ pnpm add @frog755/dsh-client-auto-retry
 ```jsonc
 {
   "dependencies": {
-    "@frog755/dsh-client-auto-retry": "^0.3.0"
+    "@frog755/dsh-client-auto-retry": "^0.4.0"
   },
   "dsh": {
     "profile": {
@@ -96,8 +96,9 @@ pnpm install
 | --- | --- | --- |
 | `graceMs` | `5000` | 宽限期：中断后等多少毫秒再自动发送「继续」 |
 | `cooldownMs` | `20000` | 冷却期：同一会话两次自动继续的最小间隔 |
-| `maxConsecutive` | `5` | 最多连续自动继续次数，超过后停下等人工介入 |
+| `maxConsecutive` | `4` | 最多连续自动继续次数，超过后停下等人工介入 |
 | `continueText` | `继续` | 自动发送的文本内容 |
+| `echoWindowMs` | `30000` | 自身回显窗口：自动发送「继续」后，此窗口内收到内容相同的消息视为自身回显，不计为人工输入 |
 | `scanOnBoot` | `true` | 页面加载时扫描最近被中断的会话并恢复 |
 | `freshMs` | `900000` | 扫描窗口：只恢复此时间段内被中断的会话（毫秒） |
 | `verbose` | `true` | 在浏览器控制台输出 `[auto-retry]` 调试日志 |
@@ -107,14 +108,17 @@ pnpm install
 ```mermaid
 flowchart LR
     A[api.events.mux 事件流] --> B{turn/end?}
-    B -- "error / interrupted / max-tokens" --> C[schedule: 宽限期 graceMs]
-    B -- "completed / aborted / blocked" --> D[重置连续计数]
-    C --> E{冷却期已过? 未超上限?}
-    E -- 否 --> F[跳过, 等人工]
-    E -- 是 --> G[fire: sessions.prompt 发送「继续」]
-    G --> H[连续次数 +1]
-    A --> I[user/message 到来] --> D
+    B -- "error / interrupted / max-tokens" --> C{已停止或待发?}
+    C -- 是 --> D[跳过, 等人工]
+    C -- 否 --> E{冷却期已过? 未超上限?}
+    E -- 否 --> D
+    E -- 是 --> F[fire: sessions.prompt 发送「继续」]
+    F --> G[连续次数 +1<br/>无论发送成败]
+    A --> H{user/message 到来}
+    H -- 自身「继续」回显<br/>文本相同且在 echoWindowMs 内 --> G
+    H -- 真正人工输入 --> I[重置计数 + 取消待发<br/>重试循环中则整条退出]
     A --> J[scanOnBoot: 启动扫描最近中断会话] --> C
+    B -- "completed / aborted / blocked" --> K[重置连续计数<br/>completed 同时重新武装]
 ```
 
 核心逻辑都在 `lib/client.js` 的 `AutoRetryRunner` 里；`lib/index.js`（Host 半边）
@@ -160,7 +164,8 @@ flowchart LR
 - **Host 侧改动需要重启 DSH**：Cordis 插件进程内只加载一次，改 `lib/index.js` 后必须重启，
   否则只是刷新页面不会生效。
 - **别把 `maxConsecutive` 设太大**：如果 provider 持续报错，自动重试只会反复烧 token，
-  建议保持默认 5 次以内，超限后由插件主动停手等你人工介入。
+  建议保持默认 4 次以内，超限后由插件主动停手等你人工介入；循环中也可以直接点输入框左侧的
+  「⏹ 停止重试」按钮立即退出。
 - **`scanOnBoot` 只扫 `freshMs` 窗口内的会话**：重启很久之后再打开页面不会误触老会话。
 - **不要把插件当错误兜底**：它只发「继续」，不做模型/provider 切换；如果需要故障转移，
   请在 DSH 的模型路由配置里做。

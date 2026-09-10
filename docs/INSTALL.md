@@ -10,7 +10,7 @@
 pnpm add @frog755/dsh-client-auto-retry
 
 # 2. 编辑该目录的 package.json，把包加入 dsh.profile.bundles：
-#    "dependencies": { "@frog755/dsh-client-auto-retry": "^0.3.0" }
+#    "dependencies": { "@frog755/dsh-client-auto-retry": "^0.4.0" }
 #    "dsh": { "profile": { "bundles": [ ..., "@frog755/dsh-client-auto-retry" ] } }
 
 # 3. 安装并重启
@@ -42,5 +42,5 @@ Client 侧改动刷新页面即生效；Host 侧 `lib/index.js` 改动需重启 
 ## 验证是否生效
 
 1. 打开浏览器 DevTools 控制台，应看到 `[auto-retry] 尝试连接 mux, 第 1 次` 日志。
-2. 设置 → 通用 → **断联自动重试** 卡片应出现（含 7 个配置项）。
+2. 设置 → 通用 → **断联自动重试** 卡片应出现（含 8 个配置项）。
 3. 在会话中触发一次中断（如断网或 provider 报错），宽限期后应自动发送「继续」。

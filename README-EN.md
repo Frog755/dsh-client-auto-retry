@@ -57,7 +57,7 @@ Then add `@frog755/dsh-client-auto-retry` to `dsh.profile.bundles` in the profil
 ```jsonc
 {
   "dependencies": {
-    "@frog755/dsh-client-auto-retry": "^0.3.0"
+    "@frog755/dsh-client-auto-retry": "^0.4.0"
   },
   "dsh": {
     "profile": {
@@ -103,8 +103,9 @@ Settings entry: **Settings → General → Auto Retry**. All fields apply live
 | --- | --- | --- |
 | `graceMs` | `5000` | How long to wait after an interruption before auto-sending "continue" (ms) |
 | `cooldownMs` | `20000` | Minimum interval between two auto-continues for the same session |
-| `maxConsecutive` | `5` | Stop auto-retrying after this many consecutive attempts; wait for a human |
+| `maxConsecutive` | `4` | Stop auto-retrying after this many consecutive attempts; wait for a human |
 | `continueText` | `继续` | The text to send |
+| `echoWindowMs` | `30000` | Self-echo window: a message with the same text arriving within this window after an auto-send counts as the plugin's own echo, not human input |
 | `scanOnBoot` | `true` | Scan recently interrupted sessions on page load and resume them |
 | `freshMs` | `900000` | Scan window: only sessions touched within this many ms |
 | `verbose` | `true` | Print `[auto-retry]` debug logs to the browser console |
@@ -114,14 +115,17 @@ Settings entry: **Settings → General → Auto Retry**. All fields apply live
 ```mermaid
 flowchart LR
     A[api.events.mux stream] --> B{turn/end?}
-    B -- "error / interrupted / max-tokens" --> C[schedule: graceMs]
-    B -- "completed / aborted / blocked" --> D[reset consecutive counter]
-    C --> E{cooldown passed? under cap?}
-    E -- no --> F[skip, wait for human]
-    E -- yes --> G[fire: sessions.prompt sends continue]
-    G --> H[consecutive +1]
-    A --> I[user/message arrives] --> D
+    B -- "error / interrupted / max-tokens" --> C{stopped or pending?}
+    C -- yes --> D[skip, wait for human]
+    C -- no --> E{cooldown passed? under cap?}
+    E -- no --> D
+    E -- yes --> F[fire: sessions.prompt sends continue]
+    F --> G[consecutive +1<br/>whether the send succeeded or not]
+    A --> H{user/message arrives}
+    H -- own continue echo<br/>same text within echoWindowMs --> G
+    H -- real human input --> I[reset counter + cancel pending<br/>leave the loop entirely if retrying]
     A --> J[scanOnBoot: scan interrupted sessions] --> C
+    B -- "completed / aborted / blocked" --> K[reset counter<br/>completed also re-arms]
 ```
 
 All core logic lives in `AutoRetryRunner` in `lib/client.js`; `lib/index.js` (the
@@ -169,7 +173,9 @@ table below item by item.**
 - **Host-side changes need a DSH restart** — `lib/index.js` changes won't apply on
   refresh alone.
 - **Don't set `maxConsecutive` too high** — if the provider keeps failing, retries
-  just burn tokens; keep the default ≤ 5 and let the plugin stop for human input.
+  just burn tokens; keep the default ≤ 4 and let the plugin stop for human input.
+  While a retry loop is running you can also click **⏹ Stop retrying** on the left of
+  the composer toolbar to leave it immediately.
 - **`scanOnBoot` only touches sessions within `freshMs`** — stale sessions won't be
   poked after a long downtime.
 - **It is not an error fallback** — it only sends "continue", it does not switch
