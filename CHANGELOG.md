@@ -55,9 +55,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   不跟随主题。现全部改用 DSH 主题 token（`--dsw-alias-*`），自动适配明/暗主题，输入框获得
   圆角、hover/focus 高亮等更自然的观感。
 
+## [0.5.1] - 2026-11-05
+
+### Fixed
+
+- Restored the official DSH client-module contract: `client.js` now registers its lazy factory through `window.__ModuleLoader__.load()` instead of using a top-level `return`.
+- Added a sandbox regression test that parses the real client script and executes its ModuleLoader factory, preventing another Web Boot `Illegal return statement` crash.
+- Added the official `dsh.client.immediately` manifest flag.
+
+## [0.5.0] - 2026-11-05
+
+### Changed
+
+- Migrated the Host half to the current DSH `Config` / `.volatile()` settings pipeline.
+- Replaced legacy connection/session APIs with the current Session Controller while retaining the official client ModuleLoader wrapper.
+- Reworked settings editing around `ctx.configForms` and current DSH slot contracts.
+
+### Fixed
+
+- Boot scan now verifies the retained Session event tail is actually retryable instead of retrying every recent Session.
+- Added per-Session event-sequence deduplication, retention lifecycle cleanup, in-flight prompt locking, request-id echo matching, exponential backoff, permanent-error stopping, and sticky manual stop.
+- Updated package compatibility metadata to DSH `>=0.2.1-rc.5 <0.3.0`.
+
 ## [Unreleased]
 
 ### Planned
 
-- Error-code classification (skip permanent failures like 401/403, quota/balance errors).
-- Browser notifications when the plugin stops for manual intervention.
+- Optional browser notifications when the plugin stops for manual intervention.

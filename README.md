@@ -30,10 +30,10 @@ DeepSeek Harness（DSH）的回合（turn）偶尔会因为网络抖动、provid
 
 这个插件就是干这件事的：
 
-1. 监听会话事件流（`api.events.mux`）；
+1. 通过当前 DSH Session Controller 维护的 `ctx.sessions.list` 和每个 retained Session 的 `eventSource` 监听事件；
 2. 发现 `turn/end` 的 `reason.kind` 属于 `error` / `interrupted` / `max-tokens` 时，
-   等一个宽限期（默认 5 秒，给 host 留出重连/恢复的时间）；
-3. 宽限期后向该会话自动发送「继续」（可配置文本）；
+   等一个宽限期（默认 5 秒，给 Host 留出恢复时间）；
+3. 宽限期后通过当前 `SessionFace.prompt()` 向该会话自动发送「继续」（可配置文本）；
 4. 带冷却期、连续次数上限、启动时扫描最近被中断的会话等防护措施，避免失控循环。
 
 ## 安装
@@ -52,7 +52,7 @@ pnpm add @frog755/dsh-client-auto-retry
 ```jsonc
 {
   "dependencies": {
-    "@frog755/dsh-client-auto-retry": "^0.4.0"
+    "@frog755/dsh-client-auto-retry": "^0.5.1"
   },
   "dsh": {
     "profile": {
@@ -90,7 +90,7 @@ pnpm install
 
 ## 设置项
 
-设置入口：**设置 → 通用 → 断联自动重试**。所有项都实时生效（`applies: "live"`）。
+设置入口：**设置 → 通用 → 断联自动重试**。所有项通过当前 DSH ConfigForms 实时生效。
 
 | 字段 | 默认值 | 含义 |
 | --- | --- | --- |
@@ -98,7 +98,7 @@ pnpm install
 | `cooldownMs` | `20000` | 冷却期：同一会话两次自动继续的最小间隔 |
 | `maxConsecutive` | `4` | 最多连续自动继续次数，超过后停下等人工介入 |
 | `continueText` | `继续` | 自动发送的文本内容 |
-| `echoWindowMs` | `30000` | 自身回显窗口：自动发送「继续」后，此窗口内收到内容相同的消息视为自身回显，不计为人工输入 |
+| `echoWindowMs` | `30000` | 保留的兼容配置；当前 DSH 优先按 durable `source.rpcId` 精确识别自身回显 |
 | `scanOnBoot` | `true` | 页面加载时扫描最近被中断的会话并恢复 |
 | `freshMs` | `900000` | 扫描窗口：只恢复此时间段内被中断的会话（毫秒） |
 | `verbose` | `true` | 在浏览器控制台输出 `[auto-retry]` 调试日志 |
@@ -107,18 +107,18 @@ pnpm install
 
 ```mermaid
 flowchart LR
-    A[api.events.mux 事件流] --> B{turn/end?}
+    A[ctx.sessions.list + Session.eventSource] --> B{turn/end?}
     B -- "error / interrupted / max-tokens" --> C{已停止或待发?}
     C -- 是 --> D[跳过, 等人工]
     C -- 否 --> E{冷却期已过? 未超上限?}
     E -- 否 --> D
-    E -- 是 --> F[fire: sessions.prompt 发送「继续」]
+    E -- 是 --> F[fire: SessionFace.prompt 发送「继续」]
     F --> G[连续次数 +1<br/>无论发送成败]
     A --> H{user/message 到来}
-    H -- 自身「继续」回显<br/>文本相同且在 echoWindowMs 内 --> G
+    H -- source.rpcId 匹配自动请求 --> G
     H -- 真正人工输入 --> I[重置计数 + 取消待发<br/>重试循环中则整条退出]
-    A --> J[scanOnBoot: 启动扫描最近中断会话] --> C
-    B -- "completed / aborted / blocked" --> K[重置连续计数<br/>completed 同时重新武装]
+    A --> J[scanOnBoot: 校验最近事件尾部] --> C
+    B -- "completed / aborted / blocked" --> K[重置连续计数]
 ```
 
 核心逻辑都在 `lib/client.js` 的 `AutoRetryRunner` 里；`lib/index.js`（Host 半边）
@@ -130,34 +130,34 @@ flowchart LR
 
 ### 已适配版本
 
-本插件是针对 **DSH `0.1.0-rc.7`**（web 端 profile；desktop runtime 同版本）编写并验证的。
-**不同版本 / 不同形态的 DSH（桌面端 App、更新或更旧的 rc、社区构建）接口可能不同，
-装不上或不生效时请按下表逐个核对。**
+本插件 `0.5.x` 已在当前环境 **DSH `0.2.1-rc.5`** 及同一 0.2.x API 面适配并验证。
+它使用当前 Cordis 动态 client half、Session Controller 和 ConfigForms；不再兼容 0.1.x rc 的旧 ModuleLoader / `connection.api` API。
+桌面端和 web profile 只要运行同一 0.2.x 插件 API 即可使用。
 
 ### 插件依赖的 DSH API 面
 
-| # | 依赖点 | rc.7 中的形态 | 其他版本可能的变化 |
-| --- | --- | --- | --- |
-| 1 | 事件流打开 | `api.events.mux({}, signal)` 返回 `AsyncIterable<RpcRequest<MuxFrame>>` | 方法名、参数、返回类型 |
-| 2 | mux 帧信封 | 帧是 RPC 信封 `{ rpcId, payload }`，真正内容在 `payload` 里（`session/event` 等） | 有的版本直接推裸帧 `{ type, sessionId, event }`；插件已同时兼容两种（见 `onMuxFrame`） |
-| 3 | 回合结束原因 | `turn/end` 的 `data.reason.kind ∈ { completed, aborted, blocked, error, 'max-tokens', interrupted }` | 枚举名可能增减；`TurnEndReasonMap` 本身设计为可被插件 merge 扩展 |
-| 4 | 发送继续 | `api.sessions.prompt({ sessionId, mode: 'queue', content: [{ type: 'text', text }] })` → `{ result: { ok } }` | 请求/响应结构可能变 |
-| 5 | 会话列表 | `api.sessions.list({})` → `result.value`（或 `result.data`）数组；字段 `s.id`/`s.sessionId`、`s.updatedAt`/`s.lastActivityAt` | 字段名可能变（插件已做兼容取值） |
-| 6 | 客户端加载格式 | `window.__ModuleLoader__.load({ id, factory })`（`@deepseek-ai/dsh-client-runtime`） | 桌面端或其他构建可能用不同的模块加载器 |
-| 7 | 设置 schema（Host） | `settingsNamespace(NS)` + `ctx.settings.register(ns, schema, { applies: 'live' })`（`@deepseek-ai/dsh-settings`） | 注册 API 或 `applies` 取值可能变 |
-| 8 | 设置卡片（Client） | `ctx.slots.inject('settings.general.item')` + `slots.register(...)` + `ctx.locale.register(NS, { zh, en })` + `ctx.settingsScope.bind({ namespace: NS })` + `runtime.defineStore(...)` | slot id、locale/scope/store API 可能变 |
-| 9 | bundle 机制 | `package.json` 的 `dsh.bundle.patch` 指向 `cordis.patch.yml`，`- insert: { id, name }` 插入插件行 | 旧版本可能需要在 profile 的 `cordis.patch.yml` 里手动 `insert`，或机制完全不同 |
+| # | 依赖点 | DSH 0.2.x 形态 |
+| --- | --- | --- |
+| 1 | 客户端加载格式 | `lib/client.js` 是动态 Cordis client half，必须直接 `return { inject, apply }`；不能使用 `require` 或旧 `window.__ModuleLoader__`。 |
+| 2 | 事件来源 | `ctx.sessions.list` 是可观察快照；每个 retained `SessionBinding.eventSource` 提供带 `seq` 的 durable Session events。 |
+| 3 | 回合结束原因 | `turn/end` 的 `event.data.reason.kind` 继续识别 `error`、`interrupted`、`max-tokens`；`completed`、`aborted`、`blocked` 不触发重试。 |
+| 4 | 发送继续 | `ctx.sessions.retain(id, { source: 'autoRetry' })` → `binding.session.beginSubmission(...)` → `session.prompt(content, 'queue', signal, requestId)`，返回 `{ ok, value/error }`。 |
+| 5 | 会话生命周期 | 通过 `SessionReference.ready`、`binding.eventSource.subscribe()` 和 `reference.release()` 管理精确 Client generation；`origin: 'subagent'` 会被排除。 |
+| 6 | 自身回显 | `beginSubmission()` 生成的 request id 会在 durable `user/message.source.rpcId` 中回显；插件优先按 request id 去重，文本窗口仅作旧事件 fallback。 |
+| 7 | 设置 schema（Host） | `lib/index.js` 导出命名 `Config`，所有可编辑字段使用 `.volatile()`；Host 用 `settings.configure({ auto: false })` 禁用自动页面。 |
+| 8 | 设置卡片（Client） | 使用 `ctx.configForms.get(NS)` 的 `getSnapshot/subscribe/mutate`，并通过 `settings.general.item` 注册；当前配置写入带 revision/recovery。 |
+| 9 | bundle 机制 | `package.json` 的 `dsh.bundle.patch` 指向 `cordis.patch.yml`，`insert` 行继续加入 profile roster；包声明 `engines.dsh` 兼容范围。 |
 
 ### 遇到问题时怎么排查
 
 1. 打开浏览器 DevTools 控制台，看有没有 `[auto-retry]` 日志；`verbose` 默认开着。
 2. 如果插件行根本没加载：先确认 `package.json` 里 `dsh.profile.bundles` 是否包含
    `dsh-client-auto-retry`，并已重启 DSH。
-3. 如果加载了但不触发：在控制台手动调用 `api.events.mux({}, signal)` 观察帧结构，
-   对照上表第 2、3 条 —— 你的版本帧信封 / `reason.kind` 枚举可能不同。
-4. 如果触发了但发送失败：对照上表第 4、5 条检查 `sessions.prompt` / `sessions.list`
-   的请求响应结构。
-5. 如果设置卡片不出现：对照上表第 7、8 条检查 settings / slots 注册方式。
+3. 如果加载了但不触发：检查控制台 `[auto-retry]` 日志，并确认当前会话不是 subagent，且
+   `ctx.sessions.list` 中的会话仍在当前 profile roster 内。
+4. 如果触发了但发送失败：检查 Session 是否成功 retain/open，以及 `RemoteResult` 的 `error.code`。
+5. 如果设置卡片不出现：确认 `@deepseek-ai/dsh-client-ui-settings`、locale 和 renderer
+   bundle 已组合，并检查 `Config` 字段是否带 `.volatile()`。
 
 ### 常见坑
 
