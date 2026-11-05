@@ -2,11 +2,21 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const source = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+// Official client.js is a normal script containing a ModuleLoader registration;
+// parsing it as a script catches the exact web-boot Illegal return regression.
+new Function(source)
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+let loadedModule
 
 globalThis.window = {
   setTimeout,
   clearTimeout,
+  __ModuleLoader__: {
+    load(module) {
+      loadedModule = module
+    },
+  },
 }
 
 function createHarness({ initialEvents = [], rowRunning = false, updatedAt = Date.now(), scanOnBoot = false } = {}) {
@@ -114,9 +124,14 @@ const factory = new Function(
   'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'fetch', 'require', 'process', 'Buffer',
   `return (async () => {\n${source}\n})()`,
 )
-const plugin = await factory(React, console, {}, { call: async () => undefined }, {},
+await factory(React, console, {}, { call: async () => undefined }, {},
   undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined)
-assert.equal(typeof plugin.apply, 'function', 'current DSH client evaluator must receive a plugin object')
+assert.equal(loadedModule.id, '@frog755/dsh-client-auto-retry')
+const plugin = loadedModule.factory(name => {
+  if (name === 'react') return React
+  throw new Error(`unexpected module request: ${name}`)
+})
+assert.equal(typeof plugin.apply, 'function', 'official DSH ModuleLoader factory must return a plugin object')
 assert.deepEqual(plugin.inject, ['slots', 'locale', 'sessions', 'configForms'])
 
 const harness = createHarness()

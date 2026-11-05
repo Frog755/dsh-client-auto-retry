@@ -57,7 +57,7 @@ Then add `@frog755/dsh-client-auto-retry` to `dsh.profile.bundles` in the profil
 ```jsonc
 {
   "dependencies": {
-    "@frog755/dsh-client-auto-retry": "^0.5.0"
+    "@frog755/dsh-client-auto-retry": "^0.5.1"
   },
   "dsh": {
     "profile": {
@@ -138,11 +138,11 @@ host half) only registers the settings schema.
 
 ### Tested version
 
-This plugin `0.5.x` was written and verified against **DSH `0.2.2-rc.1`** and the same 0.2.x API surface. It uses the dynamic Cordis client half, Session Controller, and ConfigForms; it does not support the old 0.1.x ModuleLoader / `connection.api` API.
+This plugin `0.5.x` was written and verified against **DSH `0.2.1-rc.5`** in the current environment and the same 0.2.x API surface. It uses the dynamic Cordis client half, Session Controller, and ConfigForms; it does not support the old 0.1.x ModuleLoader / `connection.api` API.
 
 ### DSH API surface this plugin depends on
 
-| # | Dependency | DSH 0.2.2-rc.1 shape |
+| # | Dependency | DSH 0.2.x shape |
 | --- | --- | --- |
 | 1 | Client half | `lib/client.js` returns `{ inject, apply }` directly; no `require`, JSX, or `window.__ModuleLoader__`. |
 | 2 | Session list | `ctx.sessions.list.getSnapshot()` returns `{ ids, byId }` and publishes via `subscribe()`. |
@@ -151,7 +151,7 @@ This plugin `0.5.x` was written and verified against **DSH `0.2.2-rc.1`** and th
 | 5 | Echo identity | Current DSH echoes the submission request id as `user/message.source.rpcId`; the plugin matches it exactly. |
 | 6 | Host settings | Named `Config` export with `.volatile()` fields; Host uses `settings.configure({ auto: false })`. |
 | 7 | Settings card | `ctx.configForms.get(NS)` plus `getSnapshot/subscribe/mutate`; the card is registered through current slots. |
-| 8 | Bundle compatibility | `engines.dsh` declares `>=0.2.2-rc.1 <0.3.0`; `dsh.bundle.patch` inserts the roster row. |
+| 8 | Bundle compatibility | `engines.dsh` declares `>=0.2.1-rc.5 <0.3.0`; `dsh.bundle.patch` inserts the roster row. |
 
 ### Debugging checklist
 

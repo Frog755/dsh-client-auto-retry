@@ -1,6 +1,6 @@
 # 安装示例
 
-三种安装方式，任选其一。适用于 DSH `0.2.2-rc.1` 及同一 0.2.x API 面；其他版本见
+三种安装方式，任选其一。适用于 DSH `0.2.1-rc.5` 及同一 0.2.x API 面；其他版本见
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md)。
 
 ## 方式 A：npm 安装（推荐，免构建授权）
@@ -10,7 +10,7 @@
 pnpm add @frog755/dsh-client-auto-retry
 
 # 2. 编辑该目录的 package.json，把包加入 dsh.profile.bundles：
-#    "dependencies": { "@frog755/dsh-client-auto-retry": "^0.5.0" }
+#    "dependencies": { "@frog755/dsh-client-auto-retry": "^0.5.1" }
 #    "dsh": { "profile": { "bundles": [ ..., "@frog755/dsh-client-auto-retry" ] } }
 
 # 3. 安装并重启

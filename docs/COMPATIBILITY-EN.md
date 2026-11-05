@@ -1,10 +1,10 @@
 # Compatibility Guide · DeepSeek Harness 0.2.x
 
-Version `0.5.x` targets **DSH `0.2.2-rc.1`** and the same 0.2.x plugin API surface. It uses the dynamic Cordis client half, Session Controller, and ConfigForms. It does not support the 0.1.x ModuleLoader / `connection.api` API.
+Version `0.5.x` targets **DSH `0.2.1-rc.5` and later 0.2.x builds** with the same plugin API surface. It uses the dynamic Cordis client half, Session Controller, and ConfigForms. It does not support the 0.1.x ModuleLoader / `connection.api` API.
 
 ## Current API surface
 
-| # | Dependency | DSH 0.2.2-rc.1 shape |
+| # | Dependency | DSH 0.2.x shape |
 | --- | --- | --- |
 | 1 | Client half | `lib/client.js` is evaluated as a dynamic closure and must return `{ inject, apply }`; no `require`, JSX, or `window.__ModuleLoader__`. |
 | 2 | Session list | `ctx.sessions.list.getSnapshot()` returns `{ ids, byId }` and publishes via `subscribe()`. |
@@ -34,6 +34,6 @@ Version `0.5.x` targets **DSH `0.2.2-rc.1`** and the same 0.2.x plugin API surfa
 
 ## Version boundary
 
-- Verified: DSH `0.2.2-rc.1`.
-- Declared package range: `>=0.2.2-rc.1 <0.3.0`.
+- Verified: DSH `0.2.1-rc.5` in the current environment and the later 0.2.x API surface.
+- Declared package range: `>=0.2.1-rc.5 <0.3.0`.
 - Not supported: DSH `0.1.x` builds that still expose `api.events.mux`, `api.sessions.prompt`, or `settingsNamespace`.

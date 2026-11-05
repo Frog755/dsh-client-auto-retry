@@ -52,7 +52,7 @@ pnpm add @frog755/dsh-client-auto-retry
 ```jsonc
 {
   "dependencies": {
-    "@frog755/dsh-client-auto-retry": "^0.5.0"
+    "@frog755/dsh-client-auto-retry": "^0.5.1"
   },
   "dsh": {
     "profile": {
@@ -130,13 +130,13 @@ flowchart LR
 
 ### 已适配版本
 
-本插件 `0.5.x` 针对 **DSH `0.2.2-rc.1` 及同一 0.2.x API 面**适配并验证。
+本插件 `0.5.x` 已在当前环境 **DSH `0.2.1-rc.5`** 及同一 0.2.x API 面适配并验证。
 它使用当前 Cordis 动态 client half、Session Controller 和 ConfigForms；不再兼容 0.1.x rc 的旧 ModuleLoader / `connection.api` API。
 桌面端和 web profile 只要运行同一 0.2.x 插件 API 即可使用。
 
 ### 插件依赖的 DSH API 面
 
-| # | 依赖点 | DSH 0.2.2-rc.1 形态 |
+| # | 依赖点 | DSH 0.2.x 形态 |
 | --- | --- | --- |
 | 1 | 客户端加载格式 | `lib/client.js` 是动态 Cordis client half，必须直接 `return { inject, apply }`；不能使用 `require` 或旧 `window.__ModuleLoader__`。 |
 | 2 | 事件来源 | `ctx.sessions.list` 是可观察快照；每个 retained `SessionBinding.eventSource` 提供带 `seq` 的 durable Session events。 |

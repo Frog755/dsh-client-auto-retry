@@ -1,10 +1,10 @@
 # 兼容性指南 · DeepSeek Harness 0.2.x
 
-本插件 `0.5.x` 针对 **DSH `0.2.2-rc.1`** 编写并验证，目标是当前 0.2.x 的动态 Cordis client half、Session Controller 和 ConfigForms API。它不再兼容 0.1.x rc 的旧 ModuleLoader 和 `connection.api` API。
+本插件 `0.5.x` 针对 **DSH `0.2.1-rc.5` 及后续 0.2.x** 编写并验证，目标是当前 0.2.x 的动态 Cordis client half、Session Controller 和 ConfigForms API。它不再兼容 0.1.x rc 的旧 ModuleLoader 和 `connection.api` API。
 
 ## 依赖的当前 API 面
 
-| # | 依赖点 | DSH 0.2.2-rc.1 形态 |
+| # | 依赖点 | DSH 0.2.x 形态 |
 | --- | --- | --- |
 | 1 | client half | `lib/client.js` 作为动态闭包执行，必须直接返回 `{ inject, apply }`；不能使用 `require`、JSX 或 `window.__ModuleLoader__`。 |
 | 2 | 会话列表 | `ctx.sessions.list.getSnapshot()` 返回 `{ ids, byId }`，并通过 `subscribe()` 发布更新。 |
@@ -42,6 +42,6 @@
 
 ## 版本边界
 
-- 已验证：DSH `0.2.2-rc.1`。
-- 包声明：`>=0.2.2-rc.1 <0.3.0`。
+- 已验证：DSH `0.2.1-rc.5`（当前环境）和同一 0.2.x API 面。
+- 包声明：`>=0.2.1-rc.5 <0.3.0`。
 - 不承诺兼容：DSH `0.1.x` 及仍暴露 `api.events.mux`、`api.sessions.prompt`、`settingsNamespace` 的旧构建。
