@@ -1,7 +1,7 @@
 {
   "name": "@frog755/dsh-client-auto-retry",
-  "version": "0.4.0",
-  "description": "DSH client plugin: 检测回合被中断/出错/超长时, 自动发送「继续」重试, 不做模型/provider 切换。带设置卡片。",
+  "version": "0.5.0",
+  "description": "DSH client plugin: automatically resumes recoverable interrupted turns with configurable safety limits.",
   "license": "MIT",
   "author": "Frog755",
   "keywords": [
@@ -36,13 +36,24 @@
     "cordis.patch.yml",
     "README-EN.md"
   ],
+  "scripts": {
+    "test": "node test/smoke.mjs"
+  },
+  "engines": {
+    "dsh": ">=0.2.2-rc.1 <0.3.0"
+  },
   "peerDependencies": {
-    "@deepseek-ai/dsh-settings": "^0.1.0-rc.7",
-    "@deepseek-ai/schemastery": "^3.18.1"
+    "@deepseek-ai/schemastery": ">=3.18.1"
   },
   "dsh": {
     "client": {
-      "inject": [],
+      "inject": [
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ],
       "platform": "web"
     },
     "bundle": {

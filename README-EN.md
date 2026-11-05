@@ -33,12 +33,12 @@ human intervention and no model switch.
 
 This plugin:
 
-1. Listens to the session event stream (`api.events.mux`);
+1. Observes `ctx.sessions.list` and each retained Session's `eventSource`;
 2. When a `turn/end` arrives with `reason.kind ∈ { error, interrupted, max-tokens }`,
-   waits a grace period (default 5s, giving the host time to reconnect/recover);
-3. Auto-sends "继续" (configurable text) to that session;
-4. Has guards: cooldown, max consecutive attempts, and boot-time scanning of
-   recently interrupted sessions.
+   waits a grace period (default 5s, giving the Host time to recover);
+3. Calls the current `SessionFace.prompt()` with a configurable "继续" message;
+4. Uses per-Session cooldown, in-flight locking, max consecutive attempts,
+   request-id echo matching, and verified boot-time recovery.
 
 ## Install
 
@@ -57,7 +57,7 @@ Then add `@frog755/dsh-client-auto-retry` to `dsh.profile.bundles` in the profil
 ```jsonc
 {
   "dependencies": {
-    "@frog755/dsh-client-auto-retry": "^0.4.0"
+    "@frog755/dsh-client-auto-retry": "^0.5.0"
   },
   "dsh": {
     "profile": {
@@ -96,17 +96,18 @@ need a restart.
 
 ## Settings
 
-Settings entry: **Settings → General → Auto Retry**. All fields apply live
-(`applies: "live"`).
+Settings entry: **Settings → General → Auto Retry**. All fields apply live through the
+current DSH ConfigForms mirror.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
 | `graceMs` | `5000` | How long to wait after an interruption before auto-sending "continue" (ms) |
 | `cooldownMs` | `20000` | Minimum interval between two auto-continues for the same session |
 | `maxConsecutive` | `4` | Stop auto-retrying after this many consecutive attempts; wait for a human |
+| `maxBackoffMs` | `300000` | Cap for exponential backoff between consecutive attempts |
 | `continueText` | `继续` | The text to send |
-| `echoWindowMs` | `30000` | Self-echo window: a message with the same text arriving within this window after an auto-send counts as the plugin's own echo, not human input |
-| `scanOnBoot` | `true` | Scan recently interrupted sessions on page load and resume them |
+| `echoWindowMs` | `30000` | Retained for settings compatibility; current DSH echo matching uses the durable request id |
+| `scanOnBoot` | `true` | Scan recent Session event tails on page load and resume only verified interruptions |
 | `freshMs` | `900000` | Scan window: only sessions touched within this many ms |
 | `verbose` | `true` | Print `[auto-retry]` debug logs to the browser console |
 
@@ -114,18 +115,18 @@ Settings entry: **Settings → General → Auto Retry**. All fields apply live
 
 ```mermaid
 flowchart LR
-    A[api.events.mux stream] --> B{turn/end?}
+    A[ctx.sessions.list + Session.eventSource] --> B{turn/end?}
     B -- "error / interrupted / max-tokens" --> C{stopped or pending?}
     C -- yes --> D[skip, wait for human]
     C -- no --> E{cooldown passed? under cap?}
     E -- no --> D
-    E -- yes --> F[fire: sessions.prompt sends continue]
+    E -- yes --> F[fire: SessionFace.prompt sends continue]
     F --> G[consecutive +1<br/>whether the send succeeded or not]
     A --> H{user/message arrives}
-    H -- own continue echo<br/>same text within echoWindowMs --> G
+    H -- source.rpcId matches auto request --> G
     H -- real human input --> I[reset counter + cancel pending<br/>leave the loop entirely if retrying]
-    A --> J[scanOnBoot: scan interrupted sessions] --> C
-    B -- "completed / aborted / blocked" --> K[reset counter<br/>completed also re-arms]
+    A --> J[scanOnBoot: verify recent event tail] --> C
+    B -- "completed / aborted / blocked" --> K[reset counter]
 ```
 
 All core logic lives in `AutoRetryRunner` in `lib/client.js`; `lib/index.js` (the
@@ -137,36 +138,31 @@ host half) only registers the settings schema.
 
 ### Tested version
 
-This plugin was written and verified against **DSH `0.1.0-rc.7`** (web profile;
-the desktop runtime ships the same rc.7 here). **Different DSH versions and
-form-factors (desktop app, newer/older release candidates, community builds) may
-have different interfaces — if it does not install or does not fire, check the
-table below item by item.**
+This plugin `0.5.x` was written and verified against **DSH `0.2.2-rc.1`** and the same 0.2.x API surface. It uses the dynamic Cordis client half, Session Controller, and ConfigForms; it does not support the old 0.1.x ModuleLoader / `connection.api` API.
 
 ### DSH API surface this plugin depends on
 
-| # | Dependency | Shape in rc.7 | Possible changes elsewhere |
-| --- | --- | --- | --- |
-| 1 | Opening the event stream | `api.events.mux({}, signal)` → `AsyncIterable<RpcRequest<MuxFrame>>` | method name, args, return type |
-| 2 | Mux frame envelope | Frames are RPC envelopes `{ rpcId, payload }`; the content lives in `payload` (`session/event`, …) | Some builds push raw frames `{ type, sessionId, event }`; the plugin already accepts both (see `onMuxFrame`) |
-| 3 | Turn-end reason | `turn/end` `data.reason.kind ∈ { completed, aborted, blocked, error, 'max-tokens', interrupted }` | Enum names may grow/shrink; `TurnEndReasonMap` is designed to be plugin-merged |
-| 4 | Sending continue | `api.sessions.prompt({ sessionId, mode: 'queue', content: [{ type: 'text', text }] })` → `{ result: { ok } }` | request/response shape may change |
-| 5 | Session list | `api.sessions.list({})` → `result.value` (or `result.data`) array; fields `s.id`/`s.sessionId`, `s.updatedAt`/`s.lastActivityAt` | field names may change (plugin reads both) |
-| 6 | Client module format | `window.__ModuleLoader__.load({ id, factory })` (`@deepseek-ai/dsh-client-runtime`) | desktop or other builds may use a different loader |
-| 7 | Settings schema (host) | `settingsNamespace(NS)` + `ctx.settings.register(ns, schema, { applies: 'live' })` (`@deepseek-ai/dsh-settings`) | registration API or `applies` values may change |
-| 8 | Settings card (client) | `ctx.slots.inject('settings.general.item')` + `slots.register(...)` + `ctx.locale.register(NS, { zh, en })` + `ctx.settingsScope.bind({ namespace: NS })` + `runtime.defineStore(...)` | slot id, locale/scope/store APIs may change |
-| 9 | Bundle mechanism | `dsh.bundle.patch` in `package.json` → `cordis.patch.yml` with `- insert: { id, name }` | older versions may need a manual `insert` in the profile's `cordis.patch.yml`, or a totally different mechanism |
+| # | Dependency | DSH 0.2.2-rc.1 shape |
+| --- | --- | --- |
+| 1 | Client half | `lib/client.js` returns `{ inject, apply }` directly; no `require`, JSX, or `window.__ModuleLoader__`. |
+| 2 | Session list | `ctx.sessions.list.getSnapshot()` returns `{ ids, byId }` and publishes via `subscribe()`. |
+| 3 | Session events | `ctx.sessions.retain(id, { source })` → `SessionReference.ready` → `SessionBinding.eventSource`, whose durable entries carry `seq`. |
+| 4 | Sending continue | `beginSubmission(...)` followed by `session.prompt(content, 'queue', signal, requestId)` returns a `RemoteResult`. |
+| 5 | Echo identity | Current DSH echoes the submission request id as `user/message.source.rpcId`; the plugin matches it exactly. |
+| 6 | Host settings | Named `Config` export with `.volatile()` fields; Host uses `settings.configure({ auto: false })`. |
+| 7 | Settings card | `ctx.configForms.get(NS)` plus `getSnapshot/subscribe/mutate`; the card is registered through current slots. |
+| 8 | Bundle compatibility | `engines.dsh` declares `>=0.2.2-rc.1 <0.3.0`; `dsh.bundle.patch` inserts the roster row. |
 
 ### Debugging checklist
 
 1. Open DevTools console and look for `[auto-retry]` logs (`verbose` is on by default).
 2. Plugin row not loading at all: confirm `dsh.profile.bundles` includes
    `dsh-client-auto-retry` and DSH was restarted.
-3. Loaded but never fires: call `api.events.mux({}, signal)` manually in the
-   console and inspect the frame shape — compare with rows #2/#3 above.
-4. Fires but send fails: check `sessions.prompt` / `sessions.list` request-response
-   shapes (rows #4/#5).
-5. No settings card: check settings/slots registration (rows #7/#8).
+3. Loaded but never fires: verify the target is in `ctx.sessions.list`, is not a
+   subagent, and its retained event tail ends in a retryable `turn/end`.
+4. Fires but send fails: inspect the Session `RemoteResult.error.code` and retain/open logs.
+5. No settings card: verify the current settings, locale, renderer, and Session Controller
+   bundles are composed and every Host `Config` field is `.volatile()`.
 
 ### Common pitfalls
 
