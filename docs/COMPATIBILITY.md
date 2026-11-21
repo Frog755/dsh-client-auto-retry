@@ -1,28 +1,41 @@
 # 兼容性指南 · DeepSeek Harness 各版本适配
 
-> 本插件最初针对 **DSH `0.1.0-rc.7`** 编写；自 **v0.5.0** 起同时适配 **DSH `0.1.6`**。
+> 本插件最初针对 **DSH `0.1.0-rc.7`** 编写；**v0.5.1** 起同时适配 **DSH `0.2.x`**（含 `0.2.2-rc.3`）
+> 与 **`0.1.x` / `0.1.6`**。
 > DeepSeek Harness 有 web / 桌面端 / headless 等多种形态，且版本迭代很快，不同构建的
 > 客户端 API 可能存在差异。装不上、不生效、或设置卡片不出现时，按本文档逐项核对。
 
-## 0.1.6 的关键断裂（v0.5.0 已修复）
+## 0.2.x 的关键断裂（v0.5.1 已修复）
 
-`0.1.6` 把客户端从「一个 `connection.api` 万能 RPC 面」改成了**类型化服务**。旧的
-`ctx.connection.api` 判断会让插件在 `apply()` 第一行直接 `return`，表现为：
-**设置面板消失 + 输入区开关按钮消失 + 自动重试完全不工作**（控制台只有一行
-`[auto-retry] connection.api 不可用, 跳过`）。
+DSH `0.2.x` 重做了设置体系，和 `0.1.x` 是完全不同的两套机制。旧插件在 0.2.x 上**一行都不会执行**，
+表现为：**设置面板没有、输入区开关没有、自动重试也不工作**，控制台连 `[auto-retry]` 日志都没有。
 
-| 依赖点 | rc.7 | 0.1.6 | v0.5.0 处理 |
+### 根因 1：inject 声明了不存在的服务 → 插件永久挂起（最致命）
+
+动态客户端插件的 `inject` 是静态数组。客户端 runner 在 mount 时会 `await fiber.await()`，
+**只要声明的服务不存在，它就永远等下去，`apply()` 一次都不会被调用**。
+旧代码的 `inject` 里有 `settingsScope`，而它在 0.2.x 已经**不存在**（0 个提供者）——
+于是设置卡片、按钮、引擎全都没注册，连日志都没有，极难排查。
+
+> 铁律：**inject 里只能写当前版本确实存在的服务。** 其它一律用 `ctx.get(name)` 运行时探测
+> （沙箱明确允许：`readService(name, false)` 不需要声明）。现在 `inject` 只保留
+> `slots` 和 `locale` 这两个两代都有的服务。
+
+### 根因 2：设置机制换代
+
+| 依赖点 | 0.1.x | 0.2.x | v0.5.1 处理 |
 | --- | --- | --- | --- |
-| 连接句柄 | `connection.api`（RPC 面） | 只有 `isLoopback/generation/state/rpc/reconnect/...`，**无 `api`** | `createTransport` 双路探测 |
-| 会话事件 | `api.events.mux({}, signal)` 开 RPC 流 | 各会话自己的事件日志 `session.eventSource` | 订阅 `sessions.list`，逐会话 attach |
-| 发送继续 | `api.sessions.prompt({sessionId, mode, content})` | `sessions.scope(id)` → `sessionOf()` → `session.prompt(content, 'queue')` | 适配层统一 `prompt(sessionId, text)` |
-| 会话列表 | `api.sessions.list({})` | `sessions.list.getSnapshot()` → `{ ids, byId }` | 适配层统一 `listSessions()` |
-| 事件条目形状 | RPC 信封 `{ rpcId, payload }` | `{ event: { seq, type, data } }` | 归一为 `{payload:{type,sessionId,event}}` 复用解析 |
-| 设置 schema | `settings.register(ns, schema, {applies})` | 同名同形（未变） | 保持 |
-| 设置卡片 | `settings.general.item` + `settingsScope.bind` | 同名同形（未变） | 保持 |
+| 配置 schema | `settings.register(ns, schema, {applies})` | **方法已移除**；schema 来自插件模块导出的 `Config` | 导出 `Config`，并对旧版回退 `register` |
+| 设置页策略 | 无 | `settings.configure({ auto }, fiber)` | 0.2.x 调 `configure({auto:false})`（本插件自带卡片，避免双入口） |
+| 字段可见性 | 全部 | **只有 `volatile` 字段进入表单**，没有则整个 entry 被 `describe()` 排除 | 每个字段标记 volatile（`volatile()` 缺失时退回 `extra('volatile', true)`） |
+| 命名空间 | `auto-retry` | **profile entry id**（`cordis.patch.yml` 的 insert id，同样是 `auto-retry`） | 统一用 `auto-retry` |
+| 读配置 | `ctx.settingsScope.bind({namespace})` | **`ctx.configForms.get(entryId)`** | 适配层二选一，两者快照形状一致 |
+| 写配置 | `scope.set/unset` | `form.set/unset` → `remote.settings.mutate(entryId, ops, revision)` | 适配层统一 |
+| 会话事件 | `api.events.mux()` 或 `session.eventSource` | `session.eventSource` | 已有 typed 路径复用 |
+| 发送继续 | `api.sessions.prompt(...)` | `sessions.scope(id)` → `sessionOf()` → `session.prompt(content,'queue')` | 已有 typed 路径复用 |
 
-> 教训：**不要把「服务是否存在」当成「能力是否存在」**。0.1.6 里 `connection` 服务还在，
-> 但能力已经从它身上搬走了。设置卡片这类纯 UI 注册不应放在能力前置判断之后。
+> 教训一：**不要把「服务是否存在」当成「能力是否存在」**。
+> 教训二：**纯 UI 注册不要放在能力前置判断之后** —— 否则一个探测失败就让整个面板消失。
 
 ## 插件依赖的 API 面（9 项）
 

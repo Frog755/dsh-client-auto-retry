@@ -4,6 +4,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-21
+
+### Fixed（修正 0.5.0 的错误定位）
+
+- **0.5.0 定位错了版本**：当时按 `0.1.6` 分析（`connection.api` 消失），但用户实际运行的是
+  **DSH `0.2.2-rc.3`**。0.2.x 的问题完全不同，且更严重。
+
+- **插件在 0.2.x 上完全不执行**：`inject` 里声明了 `settingsScope`，而该服务在 0.2.x
+  **已不存在**。动态客户端插件 mount 时会 `await fiber.await()`，声明的服务缺失就**永久挂起**，
+  `apply()` 一次都不跑 —— 所以设置面板、输入区按钮、自动重试引擎全都没了，且**连日志都没有**。
+  现 `inject` 只保留两代都存在的 `slots` / `locale`，其余服务一律用 `ctx.get(name)` 运行时探测。
+
+- **0.2.x 设置体系换代**：
+  - `settings.register()` 已移除 → 改为导出插件 `Config`（schema 来源）+ `settings.configure({auto:false})`。
+  - `settingsScope` 已移除 → 客户端改用 `ctx.configForms.get(entryId)`（entry id 即 `auto-retry`）。
+  - 0.2.x 的 `describe()` **只投影 volatile 字段**，没有 volatile 字段时整个 entry 被排除、
+    卡片读不到值 → 所有字段标记 volatile（`volatile()` 不可用时退回 `extra('volatile', true)`，
+    以兼容插件内置的 schemastery 3.18.x）。
+
+### Changed
+
+- 新增 `createConfigSource()`：`configForms`（0.2.x）与 `settingsScope`（0.1.x）统一成同一读取/写入面。
+- 传输层继续双路：`sessions`（0.1.6+/0.2.x）或 `connection.api`（rc.7）。
+- `documentPath`/配置写入走 0.2.x 的 profile patch（由 `remote.settings.mutate` 完成）。
+
+### Note
+
+- **host 侧改动需要重启 DSH**（Cordis 插件进程内只加载一次）；client 侧 `apply` 的改动刷新页面即可。
+- 0.5.0 的错误分析保留在 git 历史里，`docs/COMPATIBILITY.md` 已按 0.2.x 重写。
+
 ## [0.5.0] - 2026-11-18
 
 ### Fixed

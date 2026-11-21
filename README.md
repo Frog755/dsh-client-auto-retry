@@ -130,9 +130,10 @@ flowchart LR
 
 ### 已适配版本
 
-本插件最初针对 **DSH `0.1.0-rc.7`** 编写；自 **v0.5.0** 起同时适配 **DSH `0.1.6`**（web profile）。
-两个版本的客户端 API 差异较大（0.1.6 移除了 `connection.api`，会话改走类型化 `ctx.sessions`），
-插件内置传输适配层自动选择。**其他版本 / 形态（桌面端 App、更旧/更新的 rc、社区构建）接口可能再变，
+本插件最初针对 **DSH `0.1.0-rc.7`** 编写；自 **v0.5.1** 起同时适配 **DSH `0.2.x`**（含 `0.2.2-rc.3`）
+与 **`0.1.x`**。两代差异很大：0.2.x 移除了 `settings.register` / `settingsScope`，设置改由插件导出的
+`Config` + volatile 字段驱动，客户端改读 `configForms`；会话走类型化 `ctx.sessions`。
+插件内置适配层自动选择，`inject` 只声明两代都有的 `slots` / `locale`，其余用 `ctx.get()` 探测。**其他版本 / 形态（桌面端 App、更旧/更新的 rc、社区构建）接口可能再变，
 装不上或不生效时请按下表逐个核对。**
 
 ### 插件依赖的 DSH API 面
@@ -206,7 +207,7 @@ flowchart LR
 
 ### 适配边界
 
-- **当前已验证**：DSH Web profile（`0.1.0-rc.7` 与 `0.1.6`）。
+- **当前已验证**：DSH Web profile（`0.1.0-rc.7`、`0.1.6`）与 **`0.2.2-rc.3`**。
 - **具备较好推广条件**：Codex、Claude Code、Pi、OpenCode、Cline、OpenClaw。
 - **适合做 SDK / Middleware，而非直接安装本插件**：OpenHands、Hermes、Goose、Aider、mini-SWE-agent。
 - **尚未宣称直接兼容**：除 DSH 外，其他平台需要单独的 Adapter、安装包和版本验证。
