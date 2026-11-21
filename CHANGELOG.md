@@ -4,6 +4,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-11-21
+
+### Fixed（0.5.1 在真实 0.2.2 上仍有三个问题，本版修复）
+
+真机调试（headless Chrome + CDP 抓真实控制台）发现 0.5.1 只修好了「卡片/按钮能渲染」，
+引擎仍然起不来，所以按钮「有但点不动」。
+
+- **`sessions` 服务是竞态，不是不存在**：apply 时 `ctx.get("sessions")` 为 `undefined`
+  （实测日志 `sessions=false`），约 2s 后才就绪。0.5.1 只探测一次就放弃 → `current` 为 null
+  → 按钮渲染出来但点击直接 return。现改为**惰性重探**：未就绪时用 `ctx.interval` 每 2s
+  重探，最多 30 次，拿到即启动引擎。
+
+- **动态包禁用全局定时器**：`DYNAMIC_CLIENT_REDIRECTS` 把 `setTimeout/setInterval/
+  clearTimeout/clearInterval` 全部替换成抛错桩，宽限期与指数退避会当场崩。
+  现全部改用 `cordis-plugin-timer` 注入的 `ctx.timeout/ctx.interval`（disposer 语义），
+  并在 `inject` 中加入 `timer`。
+
+- **`scanOnBoot` 会向无关会话盲发「继续」**：旧逻辑只按 `updatedAt` 新鲜度筛选，
+  **从不检查上一回合是否真的中断**，页面一加载就对最近会话发「继续」。
+  现改为：只处理**用户已打开（retain）**的会话，并读取其事件日志中最后一个
+  `turn/end` 的 `reason.kind`，仅当为 `error` / `interrupted` / `max-tokens` 时才排期。
+
+- **`sessions.scope(id)` 只对已 retain 的会话有效**：发送「继续」时若会话未打开会报
+  `no-session`。现改用 `sessions.using(id, { source: "auto-retry" }, ref => ...)`，
+  由它负责 retain → await ready → 执行 → release。
+
+### Verified（真机）
+
+- 引擎启动：`传输层: 类型化 ctx.sessions → 传输层就绪, 启动引擎 → 已订阅会话事件 …`
+- 按钮点击实测：`⏹ 停止自动重试` → 点击 → `▶ 恢复自动重试` ✓
+- 启动扫描误发：`扫描完成, 检查 0 个最近会话`（不再盲发）✓
+
 ## [0.5.1] - 2026-11-21
 
 ### Fixed（修正 0.5.0 的错误定位）

@@ -34,6 +34,14 @@ DSH `0.2.x` 重做了设置体系，和 `0.1.x` 是完全不同的两套机制�
 | 会话事件 | `api.events.mux()` 或 `session.eventSource` | `session.eventSource` | 已有 typed 路径复用 |
 | 发送继续 | `api.sessions.prompt(...)` | `sessions.scope(id)` → `sessionOf()` → `session.prompt(content,'queue')` | 已有 typed 路径复用 |
 
+### 0.2.x 另外两个坑（v0.5.2 修复）
+
+- **服务是竞态的**：`ctx.get("sessions")` 在 `apply()` 时返回 `undefined`，约 2s 后才就绪。
+  只探测一次会**静默失败**（按钮渲染出来但 `current` 为 null，点击无反应）。必须惰性重探。
+- **全局定时器被禁用**：动态包沙箱把 `setTimeout/setInterval/clearTimeout/clearInterval`
+  全替换成抛错桩。延时一律用 `cordis-plugin-timer` 的 `ctx.timeout/ctx.interval`
+  （需 `inject: ['timer']`），返回值是 disposer 而非 id。
+
 > 教训一：**不要把「服务是否存在」当成「能力是否存在」**。
 > 教训二：**纯 UI 注册不要放在能力前置判断之后** —— 否则一个探测失败就让整个面板消失。
 
