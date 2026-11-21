@@ -1,8 +1,28 @@
 # 兼容性指南 · DeepSeek Harness 各版本适配
 
-> 本插件最初是针对 **DSH `0.1.0-rc.7`**（web 端 profile；desktop runtime 同版本）编写并验证的。
-> DeepSeek Harness 有 web / 桌面端 / headless 等多种形态，且 rc 版本迭代很快，不同构建的
+> 本插件最初针对 **DSH `0.1.0-rc.7`** 编写；自 **v0.5.0** 起同时适配 **DSH `0.1.6`**。
+> DeepSeek Harness 有 web / 桌面端 / headless 等多种形态，且版本迭代很快，不同构建的
 > 客户端 API 可能存在差异。装不上、不生效、或设置卡片不出现时，按本文档逐项核对。
+
+## 0.1.6 的关键断裂（v0.5.0 已修复）
+
+`0.1.6` 把客户端从「一个 `connection.api` 万能 RPC 面」改成了**类型化服务**。旧的
+`ctx.connection.api` 判断会让插件在 `apply()` 第一行直接 `return`，表现为：
+**设置面板消失 + 输入区开关按钮消失 + 自动重试完全不工作**（控制台只有一行
+`[auto-retry] connection.api 不可用, 跳过`）。
+
+| 依赖点 | rc.7 | 0.1.6 | v0.5.0 处理 |
+| --- | --- | --- | --- |
+| 连接句柄 | `connection.api`（RPC 面） | 只有 `isLoopback/generation/state/rpc/reconnect/...`，**无 `api`** | `createTransport` 双路探测 |
+| 会话事件 | `api.events.mux({}, signal)` 开 RPC 流 | 各会话自己的事件日志 `session.eventSource` | 订阅 `sessions.list`，逐会话 attach |
+| 发送继续 | `api.sessions.prompt({sessionId, mode, content})` | `sessions.scope(id)` → `sessionOf()` → `session.prompt(content, 'queue')` | 适配层统一 `prompt(sessionId, text)` |
+| 会话列表 | `api.sessions.list({})` | `sessions.list.getSnapshot()` → `{ ids, byId }` | 适配层统一 `listSessions()` |
+| 事件条目形状 | RPC 信封 `{ rpcId, payload }` | `{ event: { seq, type, data } }` | 归一为 `{payload:{type,sessionId,event}}` 复用解析 |
+| 设置 schema | `settings.register(ns, schema, {applies})` | 同名同形（未变） | 保持 |
+| 设置卡片 | `settings.general.item` + `settingsScope.bind` | 同名同形（未变） | 保持 |
+
+> 教训：**不要把「服务是否存在」当成「能力是否存在」**。0.1.6 里 `connection` 服务还在，
+> 但能力已经从它身上搬走了。设置卡片这类纯 UI 注册不应放在能力前置判断之后。
 
 ## 插件依赖的 API 面（9 项）
 

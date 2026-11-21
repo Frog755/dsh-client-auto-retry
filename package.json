@@ -1,6 +1,6 @@
 {
   "name": "@frog755/dsh-client-auto-retry",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "DSH client plugin: 检测回合被中断/出错/超长时, 自动发送「继续」重试, 不做模型/provider 切换。带设置卡片。",
   "license": "MIT",
   "author": "Frog755",
@@ -37,7 +37,7 @@
     "README-EN.md"
   ],
   "peerDependencies": {
-    "@deepseek-ai/dsh-settings": "^0.1.0-rc.7 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.7 || ^0.2.0-rc.1 || ^0.1.6",
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "dsh": {

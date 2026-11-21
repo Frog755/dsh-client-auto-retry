@@ -4,6 +4,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-18
+
+### Fixed
+
+- **设置面板消失、输入区开关按钮消失（DSH `0.1.6` 起）**：`apply()` 开头以
+  `ctx.connection.api` 做前置判断，而 0.1.6 的 `connection` 句柄只剩
+  `isLoopback / generation / state / rpc / reconnect / registerGenerationSource / start`，
+  **已无 `api` 字段**。该判断恒为真，`apply` 第一行就 `return`，导致后面所有注册
+  （设置卡片、输入区停止/恢复按钮）全部不执行——连自动重试引擎本身也没起来。
+  现改为：设置卡片与按钮**无条件注册**；只有重试引擎依赖传输层。
+- **0.1.6 会话事件源**：旧代码用 `api.events.mux()` 开 RPC 流，0.1.6 已改为各会话
+  自己的事件日志。现新增 typed 传输层，订阅 `sessions.list` 并为每个会话的
+  `eventSource` 附加观察，条目形状 `{ event: { seq, type, data } }` 复用原有
+  `turn/end` / `user/message` 解析。
+
+### Added
+
+- **跨版本传输适配层**（`createTransport`）：
+  - `legacy`：`ctx.connection.api`（rc.7 及更早），沿用 `events.mux` / `sessions.prompt|list`。
+  - `typed`：`ctx.sessions`（`0.1.6+`），用 `sessions.scope(id)` → `sessionOf()` →
+    `session.prompt(content, 'queue')`，事件走 `eventSource`。
+  - 两者都不可用时只跳过重试引擎，**设置卡片仍然可用**（不再整块消失）。
+- `inject` 增加 `sessions`。
+
+### Changed
+
+- Host 侧移除未经验证的 `settings.configure(...)` 猜测分支；`settings.register` 不可用时
+  只打日志并回落到内置默认值，不再可能误调用不存在的 API。
+- `peerDependencies` 的 `dsh-settings` 增加 `^0.1.6`。
+
 ## [0.4.0] - 2026-09-10
 
 ### Fixed

@@ -137,11 +137,13 @@ host half) only registers the settings schema.
 
 ### Tested version
 
-This plugin was written and verified against **DSH `0.1.0-rc.7`** (web profile;
-the desktop runtime ships the same rc.7 here). **Different DSH versions and
-form-factors (desktop app, newer/older release candidates, community builds) may
-have different interfaces — if it does not install or does not fire, check the
-table below item by item.**
+This plugin was written against **DSH `0.1.0-rc.7`**; since **v0.5.0** it also
+supports **DSH `0.1.6`** (web profile). The two differ substantially on the client
+side — 0.1.6 removed `connection.api` and moved sessions to typed `ctx.sessions` —
+and the plugin ships a transport adapter that picks the right one. **Other
+versions and form-factors (desktop app, older/newer release candidates, community
+builds) may have different interfaces — if it does not install or does not fire,
+check the table below item by item.**
 
 ### DSH API surface this plugin depends on
 

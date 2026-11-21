@@ -130,8 +130,9 @@ flowchart LR
 
 ### 已适配版本
 
-本插件是针对 **DSH `0.1.0-rc.7`**（web 端 profile；desktop runtime 同版本）编写并验证的。
-**不同版本 / 不同形态的 DSH（桌面端 App、更新或更旧的 rc、社区构建）接口可能不同，
+本插件最初针对 **DSH `0.1.0-rc.7`** 编写；自 **v0.5.0** 起同时适配 **DSH `0.1.6`**（web profile）。
+两个版本的客户端 API 差异较大（0.1.6 移除了 `connection.api`，会话改走类型化 `ctx.sessions`），
+插件内置传输适配层自动选择。**其他版本 / 形态（桌面端 App、更旧/更新的 rc、社区构建）接口可能再变，
 装不上或不生效时请按下表逐个核对。**
 
 ### 插件依赖的 DSH API 面
@@ -205,7 +206,7 @@ flowchart LR
 
 ### 适配边界
 
-- **当前已验证**：DSH Web profile（`0.1.0-rc.7`）。
+- **当前已验证**：DSH Web profile（`0.1.0-rc.7` 与 `0.1.6`）。
 - **具备较好推广条件**：Codex、Claude Code、Pi、OpenCode、Cline、OpenClaw。
 - **适合做 SDK / Middleware，而非直接安装本插件**：OpenHands、Hermes、Goose、Aider、mini-SWE-agent。
 - **尚未宣称直接兼容**：除 DSH 外，其他平台需要单独的 Adapter、安装包和版本验证。
